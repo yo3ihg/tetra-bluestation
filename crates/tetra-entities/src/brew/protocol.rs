@@ -351,6 +351,21 @@ pub fn build_subscriber_register(issi: u32, groups: &[u32]) -> Vec<u8> {
     buf
 }
 
+/// Build a subscriber re-registration message (for already-registered subscribers)
+pub fn build_subscriber_reregister(issi: u32) -> Vec<u8> {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default();
+
+    let mut buf = Vec::with_capacity(18);
+    buf.push(BREW_CLASS_SUBSCRIBER);
+    buf.push(BREW_SUBSCRIBER_REREGISTER);
+    write_u32_le(&mut buf, issi);
+    write_u64_le(&mut buf, now.as_secs());
+    write_u32_le(&mut buf, now.subsec_nanos());
+    buf
+}
+
 /// Build a subscriber affiliation message
 pub fn build_subscriber_affiliate(issi: u32, groups: &[u32]) -> Vec<u8> {
     let now = std::time::SystemTime::now()
@@ -451,16 +466,8 @@ pub fn build_short_transfer(session_uuid: &Uuid, source: u32, destination: u32) 
     buf.extend_from_slice(session_uuid.as_bytes());
     write_u32_le(&mut buf, source);
     write_u32_le(&mut buf, destination);
-    // number field: 32 bytes, zero-padded
-    let number_str = format!("{}", destination);
-    let number_bytes = number_str.as_bytes();
-    for i in 0..32 {
-        if i < number_bytes.len() {
-            buf.push(number_bytes[i]);
-        } else {
-            buf.push(0);
-        }
-    }
+    // number field: 32 bytes, zero-filled (external subscriber number not supported)
+    buf.extend_from_slice(&[0u8; 32]);
     buf
 }
 
